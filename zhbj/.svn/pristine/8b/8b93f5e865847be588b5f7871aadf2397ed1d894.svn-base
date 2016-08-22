@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp" >
+    <ImageView 
+        android:id="@+id/iv_icon"
+        android:layout_width="150dp"
+        android:layout_height="100dp"
+        android:background="#a000"
+        android:padding="1dp"
+        android:layout_marginRight="5dp"
+        android:src="@drawable/image_demo"
+        android:scaleType="fitXY"/>
+    <TextView 
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/tv_title"
+        android:layout_toRightOf="@+id/iv_icon"
+        android:textSize="18sp"
+        android:textColor="#000"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:text="才开始不触手可及村里困困困了； 想看你呢吃看中了你的了离开了看来下次你看看仓库老年痴呆快女打开电脑"/>
+    <TextView 
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/tv_date"
+        android:layout_toRightOf="@+id/iv_icon"
+        android:layout_below="@+id/tv_title"
+        android:textSize="18sp"
+        android:textColor="#8000"
+        android:layout_marginTop="5dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:text="2016-7-31"/>
+    
+
+</RelativeLayout>

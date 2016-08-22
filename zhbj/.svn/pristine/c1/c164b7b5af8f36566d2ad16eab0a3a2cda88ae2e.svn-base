@@ -1,0 +1,231 @@
+package com.itandroid.zhbj.view;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import com.itandroid.zhbj.R;
+import com.itandroid.zhbj.domain.NewsMenu.NewsTabData;
+
+import android.R.integer;
+import android.content.Context;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+/**
+ * 下拉刷新的ListView
+ * 
+ * @author Administrator
+ * 
+ */
+public class PullToRefreshListView extends ListView {
+	public static final int STATE_PULL_TO_REFRESH = 1;
+	public static final int STATE_RELEASE_REFRESH = 2;
+	public static final int STATE_REFRESHING = 3;
+
+	private int mCurrentState = STATE_PULL_TO_REFRESH;
+
+	private View mHeadView;
+	private TextView tvTitle;
+	private TextView tvTime;
+	private ImageView ivArrow;
+	private ProgressBar pbProgress;
+	private int mHeadViewHeight;
+	private int startY = -1;
+	private RotateAnimation mRotateDown;
+	private RotateAnimation mRotateUp;
+
+	public PullToRefreshListView(Context context) {
+		super(context);
+		initHeadView();
+	}
+
+	public PullToRefreshListView(Context context, AttributeSet attrs,
+			int defStyleAttr) {
+		super(context, attrs, defStyleAttr);
+		initHeadView();
+	}
+
+	public PullToRefreshListView(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		initHeadView();
+	}
+
+	private void initHeadView() {
+		mHeadView = View.inflate(getContext(), R.layout.pull_to_refresh, null);
+
+		addHeaderView(mHeadView);
+
+		tvTitle = (TextView) mHeadView.findViewById(R.id.tv_title);
+		tvTime = (TextView) mHeadView.findViewById(R.id.tv_time);
+		ivArrow = (ImageView) mHeadView.findViewById(R.id.iv_arrow);
+		pbProgress = (ProgressBar) mHeadView.findViewById(R.id.pb_loading);
+
+		// 隐藏头布局
+		mHeadView.measure(0, 0);
+		mHeadViewHeight = mHeadView.getMeasuredHeight();
+		mHeadView.setPadding(0, -mHeadViewHeight, 0, 0);
+
+		initAnimation();
+		setCurrentTime();
+
+	}
+
+	/**
+	 * 设置刷新时间
+	 */
+	private void setCurrentTime() {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String time = format.format(new Date());
+		
+		tvTime.setText(time);
+	}
+
+	private void initAnimation() {
+		mRotateDown = new RotateAnimation(-180, 0, Animation.RELATIVE_TO_SELF,
+				0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		mRotateDown.setDuration(200);
+		mRotateDown.setFillAfter(true);
+
+		mRotateUp = new RotateAnimation(0, -180, Animation.RELATIVE_TO_SELF,
+				0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		mRotateUp.setDuration(200);
+		mRotateUp.setFillAfter(true);
+
+	}
+
+	@Override
+	public boolean onTouchEvent(MotionEvent ev) {
+
+		switch (ev.getAction()) {
+
+		case MotionEvent.ACTION_DOWN:
+			startY = (int) ev.getY();
+			break;
+		case MotionEvent.ACTION_MOVE:
+			if (startY == -1) {// 当用户按住头条新闻的viewpager进行下拉时,ACTION_DOWN会被viewpager消费掉,
+				// 导致startY没有赋值,此处需要重新获取一下
+				startY = (int) ev.getY();
+			}
+			
+			if (mCurrentState == STATE_REFRESHING) {
+				// 如果是正在刷新, 跳出循环
+				break;
+			}
+			
+			
+
+			int endY = (int) ev.getY();
+			int dy = endY - startY;
+			int firstVisiblePosition = getFirstVisiblePosition();
+
+			if (dy > 0 && firstVisiblePosition == 0) {
+				int padding = dy - mHeadViewHeight;
+				mHeadView.setPadding(0, padding, 0, 0);
+
+				if (padding > 0 && mCurrentState != STATE_RELEASE_REFRESH) {
+					mCurrentState = STATE_RELEASE_REFRESH;
+					refreshData();
+
+				} else if (padding < 0
+						&& mCurrentState != STATE_PULL_TO_REFRESH) {
+					mCurrentState = STATE_PULL_TO_REFRESH;
+					refreshData();
+
+				}
+				return true;
+			}
+		case MotionEvent.ACTION_UP:
+			startY = -1;
+			if (mCurrentState == STATE_RELEASE_REFRESH) {
+				mCurrentState = STATE_REFRESHING;
+				refreshData();
+
+				// 完整展示头布局
+				mHeadView.setPadding(0, 0, 0, 0);
+				// 4. 进行回调
+				if (mListener != null) {
+					mListener.Refresh();
+				}
+
+			} else if (mCurrentState == STATE_PULL_TO_REFRESH) {
+				// 隐藏头布局
+				mHeadView.setPadding(0, -mHeadViewHeight, 0, 0);
+			}
+
+			break;
+
+		default:
+			break;
+		}
+		return super.onTouchEvent(ev);
+	}
+
+	/**
+	 * 根据当前状态刷新界面
+	 */
+	private void refreshData() {
+		switch (mCurrentState) {
+		case STATE_PULL_TO_REFRESH:
+			tvTitle.setText("下拉刷新");
+			pbProgress.setVisibility(View.INVISIBLE);
+			ivArrow.setVisibility(View.VISIBLE);
+			ivArrow.startAnimation(mRotateDown);
+			break;
+
+		case STATE_RELEASE_REFRESH:
+			tvTitle.setText("释放刷新");
+			pbProgress.setVisibility(View.INVISIBLE);
+			ivArrow.setVisibility(View.VISIBLE);
+			ivArrow.startAnimation(mRotateUp);
+			break;
+		case STATE_REFRESHING:
+			tvTitle.setText("正在刷新");
+
+			ivArrow.clearAnimation(); // 清除箭头动画,否则无法隐
+
+			pbProgress.setVisibility(View.VISIBLE);
+			ivArrow.setVisibility(View.INVISIBLE);
+			break;
+
+		default:
+			break;
+		}
+	}
+	/**刷新结束，收起控件
+	 * @param success
+	 */
+	public void onRefreshComplete(boolean success){
+		
+		mHeadView.setPadding(0, -mHeadViewHeight, 0, 0);
+		mCurrentState = STATE_PULL_TO_REFRESH;
+		tvTitle.setText("下拉刷新");
+		pbProgress.setVisibility(View.INVISIBLE);
+		ivArrow.setVisibility(View.VISIBLE);
+		if (success) {// 只有刷新成功之后才更新时间
+			setCurrentTime();
+		}
+	}
+	/**1. 下拉刷新的回调接口
+	 * @author Administrator
+	 *
+	 */
+	public interface onRefreshListener{
+		public void Refresh();
+	}
+	/**2. 暴露接口,设置监听
+	 * @param listener
+	 */
+	public void setOnRefreshListener(onRefreshListener listener){
+		mListener = listener;
+	}
+	//3. 定义成员变量,接收监听对象
+	private onRefreshListener mListener;
+
+}
